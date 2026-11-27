@@ -1,0 +1,4 @@
+# Local development WITHOUT Docker (scripts/dev.py).
+# pgserver bundles PostgreSQL 16 + pgvector as a pip package (needs Python 3.9–3.12).
+-r requirements.txt
+pgserver>=0.1.4

@@ -1,0 +1,34 @@
+# EventLens indexing workers (WORKER_CONCURRENCY processes) — non-Docker deployment.
+
+[Unit]
+Description=EventLens indexing workers
+After=network.target postgresql.service redis-server.service
+Wants=postgresql.service redis-server.service
+
+[Service]
+Type=simple
+User=eventlens
+Group=eventlens
+WorkingDirectory=/opt/eventlens/backend
+ExecStart=/opt/eventlens/backend/.venv/bin/python -m app.workers.run
+Restart=always
+RestartSec=5
+# SIGTERM = warm shutdown: running jobs finish first (job timeout is 10 min).
+KillSignal=SIGTERM
+KillMode=mixed
+TimeoutStopSec=660
+# Indexing is background work: yield CPU to the API under load.
+Nice=5
+
+# Hardening
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/srv/eventlens/photos
+ProtectKernelTunables=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+
+[Install]
+WantedBy=multi-user.target

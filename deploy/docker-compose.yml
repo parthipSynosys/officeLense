@@ -1,0 +1,100 @@
+# EventLens — Docker Compose stack: API, indexing workers, PostgreSQL+pgvector, Valkey (Redis-compatible).
+#
+#   cd deploy
+#   cp .env.example .env            # set POSTGRES_PASSWORD
+#   cp ../backend/.env.example ../backend/.env   # set JWT_SECRET, CORS_ORIGIN, ...
+#   docker compose up -d --build
+#
+# nginx runs on the HOST (see nginx.conf): it serves the frontend build and the
+# photos directory, and proxies /api to 127.0.0.1:8000.
+
+name: eventlens
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: eventlens
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in deploy/.env}
+      POSTGRES_DB: eventlens
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    # Exact vector scans benefit from parallel workers and enough shared buffers.
+    command: >
+      postgres
+        -c shared_buffers=512MB
+        -c work_mem=32MB
+        -c max_parallel_workers_per_gather=2
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U eventlens -d eventlens"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  # Valkey: BSD-3-licensed, Redis-protocol compatible (Redis >= 7.4 is no longer OSI open source).
+  redis:
+    image: valkey/valkey:8-alpine
+    restart: unless-stopped
+    # Persist the job queue; never evict queued jobs.
+    command: ["valkey-server", "--appendonly", "yes", "--maxmemory-policy", "noeviction"]
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "valkey-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  api:
+    build: ../backend
+    image: eventlens-backend:latest
+    restart: unless-stopped
+    env_file: ../backend/.env
+    environment: &backend_env
+      DATABASE_URL: postgresql+psycopg://eventlens:${POSTGRES_PASSWORD}@postgres:5432/eventlens
+      REDIS_URL: redis://redis:6379/0
+      PHOTOS_DIR: /data/photos
+      MODELS_DIR: /app/models
+      # The port is published on 127.0.0.1 only, so the only client is host nginx
+      # (seen via the Docker bridge); trust its X-Forwarded-For for rate limiting.
+      FORWARDED_ALLOW_IPS: "*"
+    command: >
+      sh -c "alembic upgrade head &&
+             gunicorn app.main:app -c gunicorn.conf.py --bind 0.0.0.0:8000"
+    ports:
+      - "127.0.0.1:8000:8000"
+    volumes:
+      - ${PHOTOS_HOST_DIR:-/srv/eventlens/photos}:/data/photos
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/health', timeout=5)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  worker:
+    image: eventlens-backend:latest
+    restart: unless-stopped
+    env_file: ../backend/.env
+    environment: *backend_env
+    command: ["python", "-m", "app.workers.run"]
+    # Let running jobs finish on `docker compose stop`.
+    stop_grace_period: 10m
+    volumes:
+      - ${PHOTOS_HOST_DIR:-/srv/eventlens/photos}:/data/photos
+      # Read-only mount for bulk-index of photos already on the server:
+      #   docker compose exec worker python -m app.cli bulk-index --event <id> --dir /import/annual-day
+      - ${IMPORT_HOST_DIR:-/srv/eventlens/import}:/import:ro
+    depends_on:
+      api:
+        condition: service_started
+
+volumes:
+  pgdata:
+  redisdata:
