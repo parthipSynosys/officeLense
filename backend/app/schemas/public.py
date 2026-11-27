@@ -40,6 +40,8 @@ class MatchPhoto(BaseModel):
     video_url: str | None = None
     duration: float | None = None
     similarity: float
+    # Videos: seconds into the clip where this guest was seen (start playback here).
+    match_time: float | None = None
 
 
 class MatchResponse(BaseModel):
@@ -48,6 +50,8 @@ class MatchResponse(BaseModel):
     photos: list[MatchPhoto]
     limit: int
     offset: int
+    # Photos/videos in the searched events still being indexed (not searchable yet).
+    pending: int = 0
 
 
 class SelfieErrorOut(BaseModel):

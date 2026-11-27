@@ -1,5 +1,5 @@
 /**
- * Typed client for the EventLens API. The frontend only ever talks to /api.
+ * Typed client for the Locator event-photos API. The frontend only ever talks to /api.
  */
 
 const API_BASE = (import.meta.env.VITE_API_BASE ?? "").replace(/\/$/, "");
@@ -47,6 +47,8 @@ export interface MatchPhoto {
   video_url: string | null;
   duration: number | null;
   similarity: number;
+  /** Videos: seconds into the clip where the guest was seen. */
+  match_time: number | null;
 }
 
 export interface MatchResponse {
@@ -55,6 +57,8 @@ export interface MatchResponse {
   photos: MatchPhoto[];
   limit: number;
   offset: number;
+  /** Photos/videos in the searched events still being processed (not searchable yet). */
+  pending?: number;
 }
 
 export interface SelfieErrorItem {

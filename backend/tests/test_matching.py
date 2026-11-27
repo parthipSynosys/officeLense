@@ -90,6 +90,6 @@ def test_build_response_pagination_and_by_event():
     # Never leaks face data.
     assert set(resp["photos"][0]) == {
         "id", "event_id", "thumb_url", "full_url", "width", "height", "similarity",
-        "media_type", "video_url", "duration",
+        "media_type", "video_url", "duration", "match_time",
     }
     assert resp["photos"][0]["thumb_url"].startswith("/photos/")

@@ -25,7 +25,7 @@ from app.face.engine import DetectedFace, FaceEngine
 # Cosine similarity above which two faces in the same video are the same person.
 # (SFace's cross-photo match threshold is ~0.36; within one clip, same-person
 # similarity is typically well above 0.6, different people well below 0.4.)
-SAME_PERSON_SIM = 0.5
+SAME_PERSON_SIM = 0.55
 # A new sighting of a known person is kept as an extra sample only if it differs
 # enough from that person's existing samples (otherwise it adds nothing).
 DIVERSE_SAMPLE_SIM = 0.8

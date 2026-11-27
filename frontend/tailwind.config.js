@@ -1,5 +1,5 @@
 /**
- * EventLens design tokens. Components use ONLY these semantic names
+ * Locator design tokens. Components use ONLY these semantic names
  * (primary, background, surface, ink, line, success, warning, danger) —
  * never raw hex values — so the theme can be changed in one place.
  *
@@ -10,18 +10,19 @@ export default {
   theme: {
     extend: {
       colors: {
+        // Locator brand blue (#1360EF, sampled from the logo).
         primary: {
-          DEFAULT: "#4F46E5",
-          50: "#EEF2FF",
-          100: "#E0E7FF",
-          200: "#C7D2FE",
-          300: "#A5B4FC",
-          400: "#818CF8",
-          500: "#6366F1",
-          600: "#4F46E5",
-          700: "#4338CA",
-          800: "#3730A3",
-          900: "#312E81",
+          DEFAULT: "#1360EF",
+          50: "#EEF4FF",
+          100: "#DCE7FE",
+          200: "#B9CFFD",
+          300: "#8AB0FA",
+          400: "#4F87F5",
+          500: "#2A6DF2",
+          600: "#1360EF",
+          700: "#0E4CC4",
+          800: "#0F3F9C",
+          900: "#11357B",
         },
         background: "#F8FAFC",
         surface: "#FFFFFF",
@@ -45,7 +46,7 @@ export default {
       boxShadow: {
         soft: "0 1px 2px rgba(15, 23, 42, 0.04), 0 4px 16px rgba(15, 23, 42, 0.06)",
         lifted: "0 2px 4px rgba(15, 23, 42, 0.06), 0 12px 32px rgba(15, 23, 42, 0.12)",
-        glow: "0 8px 24px rgba(79, 70, 229, 0.35)",
+        glow: "0 8px 24px rgba(19, 96, 239, 0.35)",
       },
       borderRadius: {
         "4xl": "2rem",
@@ -55,6 +56,14 @@ export default {
           "0%": { backgroundPosition: "-400px 0" },
           "100%": { backgroundPosition: "400px 0" },
         },
+        "pin-bounce": {
+          "0%, 100%": { transform: "translateY(0)" },
+          "50%": { transform: "translateY(-10px)" },
+        },
+        "pin-pulse": {
+          "0%": { transform: "scale(0.6)", opacity: "0.7" },
+          "100%": { transform: "scale(2.2)", opacity: "0" },
+        },
         "fade-in": {
           from: { opacity: "0", transform: "translateY(4px)" },
           to: { opacity: "1", transform: "translateY(0)" },
@@ -63,6 +72,8 @@ export default {
       animation: {
         shimmer: "shimmer 1.4s linear infinite",
         "fade-in": "fade-in 200ms ease-out",
+        "pin-bounce": "pin-bounce 1.2s ease-in-out infinite",
+        "pin-pulse": "pin-pulse 1.6s ease-out infinite",
       },
     },
   },

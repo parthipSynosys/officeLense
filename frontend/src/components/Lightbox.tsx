@@ -4,6 +4,7 @@ import { createPortal } from "react-dom";
 import { useFocusTrap } from "./Modal";
 import { ChevronLeftIcon, ChevronRightIcon, DownloadIcon, XIcon } from "./Icons";
 import { Spinner } from "./Spinner";
+import { formatDuration } from "@/lib/format";
 
 export interface LightboxPhoto {
   id: string;
@@ -13,7 +14,12 @@ export interface LightboxPhoto {
   downloadUrl: string;
   /** Set for videos: played inline, with fullUrl as the poster. */
   videoUrl?: string | null;
+  /** Videos: seconds where the guest appears; playback starts just before it. */
+  startAt?: number | null;
 }
+
+/** Start a little before the matched moment so the guest walks into view. */
+const LEAD_IN_SECONDS = 1;
 
 interface Props {
   photos: LightboxPhoto[];
@@ -31,6 +37,7 @@ export function Lightbox({ photos, index, onIndexChange, onClose, onNearEnd }: P
   const [loaded, setLoaded] = useState(false);
   const [videoError, setVideoError] = useState(false);
   const touch = useRef<{ x: number; y: number } | null>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
   const photo = photos[index];
   const hasPrev = index > 0;
   const hasNext = index < photos.length - 1;
@@ -122,14 +129,19 @@ export function Lightbox({ photos, index, onIndexChange, onClose, onNearEnd }: P
         {photo.videoUrl && !videoError ? (
           <video
             key={photo.id}
+            ref={videoRef}
             src={photo.videoUrl}
-            poster={photo.fullUrl ?? undefined}
+            poster={photo.startAt ? undefined : photo.fullUrl ?? undefined}
             controls
             autoPlay
             playsInline
-            preload="metadata"
+            preload="auto"
             aria-label={photo.alt}
+            onLoadedMetadata={(e) => {
+              if (photo.startAt) e.currentTarget.currentTime = Math.max(0, photo.startAt - LEAD_IN_SECONDS);
+            }}
             onLoadedData={() => setLoaded(true)}
+            onSeeked={() => setLoaded(true)}
             onError={() => {
               setLoaded(true);
               setVideoError(true);
@@ -177,6 +189,23 @@ export function Lightbox({ photos, index, onIndexChange, onClose, onNearEnd }: P
           <ChevronRightIcon />
         </button>
       </div>
+
+      {photo.videoUrl && !videoError && photo.startAt != null ? (
+        <div className="flex justify-center px-4 pb-3">
+          <button
+            type="button"
+            onClick={() => {
+              const v = videoRef.current;
+              if (!v) return;
+              v.currentTime = Math.max(0, (photo.startAt ?? 0) - LEAD_IN_SECONDS);
+              void v.play().catch(() => undefined);
+            }}
+            className="inline-flex h-10 items-center gap-2 rounded-full bg-primary px-4 text-sm font-semibold text-white shadow-glow hover:bg-primary-700"
+          >
+            You appear at {formatDuration(photo.startAt)} · Jump to your moment
+          </button>
+        </div>
+      ) : null}
 
       {/* Mobile navigation bar */}
       <div className="flex items-center justify-between px-4 pb-4 sm:hidden safe-bottom">

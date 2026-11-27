@@ -20,7 +20,7 @@ from app.models import EVENT_TYPES
 from app.ratelimit import rate_limit
 from app.schemas import MatchResponse
 from app.services.images import InvalidImageError, load_image, pil_to_bgr
-from app.services.matching import build_response, find_matches
+from app.services.matching import build_response, count_pending, find_matches
 
 router = APIRouter(tags=["public"])
 
@@ -115,7 +115,8 @@ def _analyze_selfies(selfies: list[MemoryFile]) -> tuple[list, list[dict]]:
 def _run_query(embeddings, event_ids, event_types, threshold, limit, offset) -> dict:
     with SessionLocal() as db:
         rows = find_matches(db, embeddings, threshold=threshold, event_ids=event_ids, event_types=event_types)
-    return build_response(rows, limit=limit, offset=offset)
+        pending = count_pending(db, event_ids=event_ids, event_types=event_types)
+    return build_response(rows, limit=limit, offset=offset, pending=pending)
 
 
 @router.post(

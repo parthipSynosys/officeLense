@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { Link, Navigate, useNavigate } from "react-router-dom";
 import { Button } from "@/components/Button";
 import { AlertIcon, ArrowLeftIcon, CameraIcon, PlusIcon, RefreshIcon, SparklesIcon, UploadIcon, XIcon } from "@/components/Icons";
+import { SearchingOverlay } from "@/components/SearchingOverlay";
 import { Spinner } from "@/components/Spinner";
 import { Alert } from "@/components/States";
 import { ApiError, publicApi } from "@/lib/api";
@@ -111,6 +112,7 @@ export function SelfiePage() {
 
   return (
     <div className="mx-auto max-w-lg">
+      <SearchingOverlay open={searching} />
       <Link to="/" className="inline-flex items-center gap-1.5 rounded-lg text-sm font-medium text-ink-muted hover:text-ink">
         <ArrowLeftIcon /> Back
       </Link>

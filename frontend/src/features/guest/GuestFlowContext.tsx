@@ -22,7 +22,8 @@ export interface SearchResult {
 }
 
 export const MAX_SELFIES = 3;
-export const LOW_THRESHOLD = 0.3;
+// Wider search for "Show more possible matches". 0.30 let in too many other people.
+export const LOW_THRESHOLD = 0.33;
 export const MAX_SELFIE_BYTES = 8 * 1024 * 1024;
 
 interface GuestFlow {

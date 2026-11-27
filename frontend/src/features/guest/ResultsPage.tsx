@@ -5,6 +5,7 @@ import { Button } from "@/components/Button";
 import { CameraIcon, DownloadIcon, ImageIcon, InfoIcon, PlayIcon, RefreshIcon, SparklesIcon } from "@/components/Icons";
 import { Lightbox, type LightboxPhoto } from "@/components/Lightbox";
 import { Modal } from "@/components/Modal";
+import { SearchingOverlay } from "@/components/SearchingOverlay";
 import { Spinner } from "@/components/Spinner";
 import { Alert, EmptyState, ProgressBar, errorMessage } from "@/components/States";
 import { ApiError, publicApi, type MatchByEvent, type MatchPhoto } from "@/lib/api";
@@ -15,6 +16,9 @@ import { TIPS } from "./messages";
 import { FETCH_LIMIT } from "./SelfiePage";
 
 const PAGE_SIZE = 60; // photos rendered per "page" of infinite scroll
+// While uploads are still being indexed, re-check for new matches this often.
+// (The match endpoint is rate limited to 10/min per IP; this uses 3.)
+const PENDING_POLL_MS = 20_000;
 const ALL = "all";
 
 interface ViewState {
@@ -51,6 +55,40 @@ function Results({ result }: { result: SearchResult }) {
   const [rerunError, setRerunError] = useState<string | null>(null);
   const [zip, setZip] = useState<{ label: string; progress: ZipProgress | null; ctrl: AbortController } | null>(null);
   const [zipNotice, setZipNotice] = useState<string | null>(null);
+  const [pending, setPending] = useState(response.pending ?? 0);
+  const [pollTick, setPollTick] = useState(0);
+  const busyRef = useRef(false);
+  busyRef.current = lightboxIndex !== null || !!zip || rerunning;
+
+  // Photos/videos still being processed are not searchable yet: keep checking,
+  // and swap in the new results as soon as more matches appear.
+  useEffect(() => {
+    if (pending <= 0) return;
+    const id = window.setTimeout(async () => {
+      if (!busyRef.current) {
+        try {
+          const res = await publicApi.match({
+            selfies: flow.selfies.map((s) => s.blob),
+            eventIds: flow.eventIds,
+            eventTypes: flow.eventTypes,
+            threshold,
+            limit: FETCH_LIMIT,
+            offset: 0,
+          });
+          if (res.total !== response.total) {
+            flow.setResult({ id: Date.now(), response: res, threshold });
+            return;
+          }
+          setPending(res.pending ?? 0);
+        } catch {
+          // Transient error or rate limit: just try again next tick.
+        }
+      }
+      setPollTick((t) => t + 1);
+    }, PENDING_POLL_MS);
+    return () => window.clearTimeout(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pending, pollTick]);
 
   const all = views[ALL];
   const allComplete = all.photos.length >= all.total;
@@ -228,6 +266,7 @@ function Results({ result }: { result: SearchResult }) {
         alt: `${p.media_type === "video" ? "Video" : "Photo"} ${i + 1} of ${current.total} from ${eventsById.get(p.event_id)?.name ?? "the event"}`,
         downloadUrl: publicApi.downloadUrl(p.id),
         videoUrl: p.media_type === "video" ? p.video_url : null,
+        startAt: p.media_type === "video" ? p.match_time : null,
       })),
     [current.photos, current.total, eventsById],
   );
@@ -242,6 +281,11 @@ function Results({ result }: { result: SearchResult }) {
             title="We couldn't find you in any photos yet"
             description={lowered ? "Even with a wider search we found no matches." : "Don't worry — a few small changes often help."}
           >
+            {pending > 0 ? (
+              <div className="mt-5 w-full text-left">
+                <PendingNotice pending={pending} />
+              </div>
+            ) : null}
             <ul className="mt-5 w-full space-y-2 text-left">
               {TIPS.map((tip) => (
                 <li key={tip} className="flex gap-2.5 rounded-xl bg-background px-3 py-2.5 text-sm text-ink-muted">
@@ -265,6 +309,7 @@ function Results({ result }: { result: SearchResult }) {
             {rerunError ? <p className="mt-3 text-sm text-danger" role="alert">{rerunError}</p> : null}
           </EmptyState>
         </div>
+        <SearchingOverlay open={rerunning} title="Searching more widely" />
       </div>
     );
   }
@@ -296,6 +341,11 @@ function Results({ result }: { result: SearchResult }) {
         </div>
       </header>
 
+      {pending > 0 ? (
+        <div className="mt-4">
+          <PendingNotice pending={pending} />
+        </div>
+      ) : null}
       {lowered ? (
         <div className="mt-4">
           <Alert tone="info" icon={<InfoIcon />}>
@@ -354,7 +404,7 @@ function Results({ result }: { result: SearchResult }) {
                       className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
                     />
                   ) : null}
-                  {p.media_type === "video" ? <VideoOverlay duration={p.duration} /> : null}
+                  {p.media_type === "video" ? <VideoOverlay duration={p.duration} matchTime={p.match_time} /> : null}
                 </button>
               </li>
             ))}
@@ -401,6 +451,8 @@ function Results({ result }: { result: SearchResult }) {
         </div>
         {rerunError ? <p className="mt-3 text-sm text-danger" role="alert">{rerunError}</p> : null}
       </section>
+
+      <SearchingOverlay open={rerunning} title="Searching more widely" />
 
       {lightboxIndex !== null ? (
         <Lightbox
@@ -475,9 +527,25 @@ function PhotoGridSkeleton() {
   );
 }
 
-function VideoOverlay({ duration }: { duration: number | null }) {
+function PendingNotice({ pending }: { pending: number }) {
+  return (
+    <Alert tone="info" icon={<Spinner className="h-4 w-4" />}>
+      <span className="font-semibold">
+        {formatNumber(pending)} {pending === 1 ? "photo or video is" : "photos and videos are"} still being processed.
+      </span>{" "}
+      Videos take a little longer. Keep this page open and any new matches will appear here automatically.
+    </Alert>
+  );
+}
+
+function VideoOverlay({ duration, matchTime }: { duration: number | null; matchTime: number | null }) {
   return (
     <>
+      {matchTime != null ? (
+        <span className="pointer-events-none absolute left-1.5 top-1.5 rounded-md bg-primary px-1.5 py-0.5 text-[11px] font-semibold tabular-nums text-white shadow">
+          You at {formatDuration(matchTime)}
+        </span>
+      ) : null}
       <span className="pointer-events-none absolute inset-0 flex items-center justify-center">
         <span className="flex h-10 w-10 items-center justify-center rounded-full bg-black/55 text-lg text-white sm:h-12 sm:w-12">
           <PlayIcon />
