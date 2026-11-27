@@ -42,17 +42,21 @@ export function HomePage() {
       <section className="relative overflow-hidden rounded-4xl bg-primary px-6 py-10 text-white shadow-lifted sm:px-10 sm:py-14">
         <div className="pointer-events-none absolute -right-16 -top-16 h-64 w-64 rounded-full bg-primary-400/40 blur-3xl" aria-hidden="true" />
         <div className="pointer-events-none absolute -bottom-24 left-10 h-64 w-64 rounded-full bg-primary-800/50 blur-3xl" aria-hidden="true" />
-        <div className="relative max-w-2xl">
+        <div className="relative">
           <span className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-xs font-semibold">
             <SparklesIcon /> Face search for event photos
           </span>
-          <h1 className="mt-4 text-3xl font-extrabold leading-tight tracking-tight sm:text-5xl">
-            Find your photos in seconds — just take a selfie.
+          {/* One line on desktop; wraps naturally on small screens. */}
+          <h1 className="mt-4 text-2xl font-extrabold leading-tight tracking-tight sm:text-3xl lg:whitespace-nowrap">
+            Find your photos in seconds, just take a selfie.
           </h1>
-          <p className="mt-3 text-base text-primary-100 sm:text-lg">
-            We'll show you every event photo you appear in, ready to view and download.
+          <h2 className="mt-3 text-xl lg:whitespace-nowrap font-bold leading-snug tracking-tight text-white/90 sm:text-2xl">
+            Every photo and video you're in, all in one place.
+          </h2>
+          <p className="mt-3 max-w-2xl text-base text-primary-100 sm:text-lg">
+            We'll show you every event photo and video you appear in, ready to view and download.
           </p>
-          <ol className="mt-6 grid gap-3 text-sm sm:grid-cols-3">
+          <ol className="mt-6 grid max-w-2xl gap-3 text-sm sm:grid-cols-3">
             {[
               { icon: <CalendarIcon />, text: "Pick your events" },
               { icon: <CameraIcon />, text: "Take a quick selfie" },
