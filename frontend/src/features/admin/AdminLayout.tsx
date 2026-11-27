@@ -14,16 +14,16 @@ export function RequireAdmin() {
 function AdminLayout() {
   const { session, logout } = useAuth();
   const link = ({ isActive }: { isActive: boolean }) =>
-    `rounded-xl px-3 py-2 text-sm font-semibold transition-colors ${
+    `whitespace-nowrap rounded-xl px-2.5 py-2 text-sm font-semibold transition-colors sm:px-3 ${
       isActive ? "bg-primary-50 text-primary-700" : "text-ink-muted hover:bg-line/60 hover:text-ink"
     }`;
 
   return (
     <div className="flex min-h-screen flex-col">
       <header className="sticky top-0 z-30 border-b border-line bg-surface/90 backdrop-blur">
-        <div className="mx-auto flex h-16 max-w-6xl items-center gap-4 px-4">
+        <div className="mx-auto flex h-16 max-w-6xl items-center gap-2 px-4 sm:gap-4">
           <Logo to="/admin" subtitle="Admin" />
-          <nav className="ml-2 flex items-center gap-1" aria-label="Admin">
+          <nav className="flex min-w-0 items-center gap-1 overflow-x-auto sm:ml-2" aria-label="Admin">
             <NavLink to="/admin" end className={link}>
               Dashboard
             </NavLink>
@@ -31,12 +31,13 @@ function AdminLayout() {
               Events
             </NavLink>
           </nav>
-          <div className="ml-auto flex items-center gap-2">
+          <div className="ml-auto flex shrink-0 items-center gap-2">
             <span className="hidden text-sm text-ink-subtle md:inline">{session?.email}</span>
             <button
               type="button"
               onClick={logout}
-              className="inline-flex h-10 items-center gap-1.5 rounded-xl px-3 text-sm font-semibold text-ink-muted hover:bg-line/60 hover:text-ink"
+              aria-label="Log out"
+              className="inline-flex h-10 items-center gap-1.5 rounded-xl px-2 text-sm sm:px-3 font-semibold text-ink-muted hover:bg-line/60 hover:text-ink"
             >
               <LogoutIcon className="text-lg" />
               <span className="hidden sm:inline">Log out</span>
